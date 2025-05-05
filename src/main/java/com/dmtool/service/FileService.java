@@ -14,46 +14,60 @@ import java.nio.file.Paths;
 
 @Service
 public class FileService {
-
-    private final String uploadDirectory = "../pre_migration/file_process/";
-
-    public void processAndSaveFile(MultipartFile file) throws IOException {
-        // Ensure upload directory exists
-        Files.createDirectories(Paths.get(uploadDirectory));
-
-        // Save the uploaded file
-        Path filePath = Paths.get(uploadDirectory + file.getOriginalFilename());
-        file.transferTo(filePath);
-
-        // Convert Excel to CSV
-        convertExcelToCsv(filePath.toString());
+    public void uploadToInputFile(MultipartFile file) throws IOException {
+        String INPUT_FILE_PATH = "../pre_convert/";
+        Path inputpath = Paths.get(INPUT_FILE_PATH);
+        Files.createDirectories(inputpath);
+        Path filePath = inputpath.resolve(file.getOriginalFilename());
+        Files.copy(file.getInputStream(), filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        System.out.println("File uploaded successfully: " + filePath);
     }
 
-    private void convertExcelToCsv(String excelFilePath) throws IOException {
-        try (FileInputStream fis = new FileInputStream(excelFilePath);
+    public void inputFileToOutput(MultipartFile file) throws IOException {
+        int count = 0;
+
+        String INPUT_FILE_PATH = "../pre_convert/";
+        String OUTPUT_FILE_PATH = "../pre_migration/file_process/";
+
+        Path outputPath = Paths.get(OUTPUT_FILE_PATH);
+        Files.createDirectories(outputPath);
+
+        Path inputFilePath = Paths.get(INPUT_FILE_PATH).resolve(file.getOriginalFilename());
+
+        String outputFileName = "2_" + file.getOriginalFilename().replace(".xlsx", ".csv");
+        Path csvOutputPath = outputPath.resolve(outputFileName);
+
+        try (FileInputStream fis = new FileInputStream(inputFilePath.toFile());
              XSSFWorkbook workbook = new XSSFWorkbook(fis);
-             FileWriter writer = new FileWriter(excelFilePath.replace(".xlsx", ".csv"))) {
+             FileWriter writer = new FileWriter(csvOutputPath.toFile())) {
 
             XSSFSheet sheet = workbook.getSheetAt(0);
 
-            // Get row and column counts
             int rowCount = sheet.getLastRowNum();
             int columnCount = sheet.getRow(0).getLastCellNum();
 
-            // Loop through each row and column to build CSV
             for (int i = 0; i <= rowCount; i++) {
                 StringBuilder rowData = new StringBuilder();
                 for (int j = 0; j < columnCount; j++) {
-                    if (sheet.getRow(i).getCell(j) != null) {
+                    if (sheet.getRow(i) != null && sheet.getRow(i).getCell(j) != null) {
                         rowData.append(sheet.getRow(i).getCell(j).toString());
                     }
                     if (j < columnCount - 1) {
-                        rowData.append("|"); // You can change this delimiter if needed
+                        rowData.append("|");
                     }
                 }
                 rowData.append("\n");
                 writer.write(rowData.toString());
             }
         }
+
+        System.out.println("File converted successfully: " + csvOutputPath);
     }
+
+    public void convert(MultipartFile file) throws IOException {
+        uploadToInputFile(file);
+        inputFileToOutput(file);
+    }
+
+
 }

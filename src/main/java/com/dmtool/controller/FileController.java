@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/files")
@@ -21,18 +23,21 @@ public class FileController {
     }
 
     @PostMapping("/uploadFiles")
-    public ResponseEntity<String> uploadFiles(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadFiles(@RequestParam("file") MultipartFile file) {
+        Map<String, String> response = new HashMap<>();
+
         if (file.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No file uploaded.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "No file uploaded.")
+            );
         }
 
         try {
-            fileService.processAndSaveFile(file);
-            return ResponseEntity.ok("File uploaded and converted successfully.");
+            fileService.convert(file);
+            response.put("message", "File uploaded and converted successfully.");
+            return ResponseEntity.ok(response);
         } catch (IOException e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("File upload or conversion failed.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "File upload or conversion failed."));
         }
     }
 }
