@@ -23,21 +23,29 @@ public class FileController {
     }
 
     @PostMapping("/uploadFiles")
-    public ResponseEntity<Map<String, String>> uploadFiles(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadFiles(@RequestParam("files") MultipartFile[] files) {
         Map<String, String> response = new HashMap<>();
 
-        if (file.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "No file uploaded.")
-            );
+        if (files == null || files.length == 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "No files uploaded."));
         }
 
         try {
-            fileService.convert(file);
-            response.put("message", "File uploaded and converted successfully.");
+            int successCount = 0;
+            for (MultipartFile file : files) {
+                if (!file.isEmpty()) {
+                    fileService.uploadToInputFile(file);
+                    successCount++;
+                }
+            }
+
+            response.put("message", String.format("Successfully uploaded %d files", successCount));
             return ResponseEntity.ok(response);
         } catch (IOException e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "File upload or conversion failed."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "File upload or conversion failed: " + e.getMessage()));
         }
     }
 }
